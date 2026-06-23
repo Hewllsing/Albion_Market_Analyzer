@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { filterMarketPrices } from '../src/services/marketService.js';
+import {
+  calculateOpportunityScore,
+  estimateOpportunityRisk,
+  getOpportunityRecommendation,
+} from '../src/utils/opportunity.js';
 import { calculateArbitrage, calculateCraftingProfit, getRecommendation } from '../src/utils/profit.js';
 
 test('calcula lucro de arbitragem descontando taxa sobre a venda', () => {
@@ -42,4 +47,38 @@ test('filtra cotacoes por preco minimo e margem minima', () => {
   ];
   const result = filterMarketPrices(prices, { minimumPrice: 100, minimumMargin: 20 });
   assert.deepEqual(result.map((price) => price.itemId), ['A']);
+});
+
+test('classifica risco de oportunidade com rota perigosa e preco antigo', () => {
+  const oldDate = new Date(Date.now() - 10 * 3_600_000).toISOString();
+  const risk = estimateOpportunityRisk({
+    purchaseCity: 'Martlock',
+    saleCity: 'Black Market',
+    updatedAtDates: [oldDate],
+    hasImmediateSale: true,
+    marginPercent: 20,
+  });
+  assert.equal(risk.level, 'Alto');
+  assert.ok(risk.points >= 7);
+});
+
+test('calcula score e recomendacao de oportunidade', () => {
+  const freshDate = new Date().toISOString();
+  const risk = estimateOpportunityRisk({
+    purchaseCity: 'Bridgewatch',
+    saleCity: 'Martlock',
+    updatedAtDates: [freshDate],
+    hasImmediateSale: true,
+    marginPercent: 30,
+  });
+  const score = calculateOpportunityScore({
+    marginPercent: 30,
+    risk,
+    updatedAtDates: [freshDate],
+    hasImmediateSale: true,
+    netProfit: 5000,
+  });
+  assert.ok(score >= 65);
+  assert.equal(getOpportunityRecommendation(82), 'Forte oportunidade');
+  assert.equal(getOpportunityRecommendation(score), score >= 80 ? 'Forte oportunidade' : 'Boa oportunidade');
 });

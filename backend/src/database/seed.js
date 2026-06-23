@@ -1,4 +1,5 @@
 import { items } from '../data/items.js';
+import { refiningRecipes } from '../data/refiningRecipes.js';
 import { recipes } from '../data/recipes.js';
 import { getPool } from './connection.js';
 
@@ -16,7 +17,8 @@ try {
     [items.map((item) => [item.itemId, item.name, item.category, item.tier, item.enchantment])],
   );
 
-  const recipeRows = recipes.flatMap((recipe) => recipe.materials.map((material) => [
+  const allRecipes = [...recipes, ...refiningRecipes];
+  const recipeRows = allRecipes.flatMap((recipe) => recipe.materials.map((material) => [
     recipe.itemId, material.itemId, material.quantity,
   ]));
   await connection.query(

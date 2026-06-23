@@ -31,6 +31,7 @@ const analyze = async () => {
     qualities: 1,
     marketTaxRate: filters.marketTaxPercent / 100,
     limit: 200,
+    sortBy: 'score',
   }));
   if (result) opportunities.value = result.data;
 };
@@ -68,11 +69,11 @@ onMounted(async () => {
     <article v-else class="panel">
       <div class="panel-heading">
         <div><p class="eyebrow">Oportunidades validas</p><h2>{{ opportunities.length }} rotas encontradas</h2></div>
-        <span class="data-note">Ordenado por lucro liquido</span>
+        <span class="data-note">Ordenado por Opportunity Score</span>
       </div>
       <div v-if="opportunities.length" class="table-wrap">
         <table>
-          <thead><tr><th>Item</th><th>Comprar em</th><th>Vender em</th><th>Compra</th><th>Venda</th><th>Taxa</th><th>Lucro liquido</th><th>Margem</th><th>Risco</th><th>Frescor</th></tr></thead>
+          <thead><tr><th>Item</th><th>Comprar em</th><th>Vender em</th><th>Compra</th><th>Venda</th><th>Taxa</th><th>Lucro liquido</th><th>Margem</th><th>Score</th><th>Risco</th><th>Recomendacao</th><th>Frescor</th></tr></thead>
           <tbody>
             <tr v-for="item in opportunities" :key="`${item.itemId}-${item.purchaseCity}-${item.saleCity}`">
               <td><ItemBadge :name="item.itemName" :tier="item.tier" /></td>
@@ -83,7 +84,9 @@ onMounted(async () => {
               <td class="muted-value">-{{ formatSilver(item.estimatedTax) }}</td>
               <td class="positive-value">+{{ formatSilver(item.netProfit) }}</td>
               <td>{{ formatPercent(item.marginPercent) }}</td>
-              <td><span class="risk-badge" :class="item.risk.level.toLowerCase()">{{ item.risk.level }}</span></td>
+              <td><span class="score-mini">{{ item.opportunityScore }}</span></td>
+              <td><span class="risk-badge" :class="item.risk.level.toLowerCase()" :title="item.risk.reason">{{ item.risk.level }}</span></td>
+              <td>{{ item.opportunityRecommendation }}</td>
               <td><span class="date-cell">{{ formatDate(item.saleUpdatedAt) }}</span></td>
             </tr>
           </tbody>

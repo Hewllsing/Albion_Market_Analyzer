@@ -69,3 +69,50 @@ export const findMarketHistory = async ({ itemId, city, server, category, tier, 
   );
   return rows;
 };
+
+export const findPriceDropOpportunities = async ({
+  city,
+  server,
+  category,
+  tier,
+  limit = 10,
+  scanLimit = 1500,
+}) => {
+  const rows = await findMarketHistory({
+    city,
+    server,
+    category,
+    tier,
+    limit: scanLimit,
+  });
+
+  const groups = new Map();
+  rows
+    .filter((row) => row.sellPriceMin > 0)
+    .forEach((row) => {
+      const key = `${row.itemId}:${row.city}:${row.quality}:${row.server}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(row);
+    });
+
+  return [...groups.values()].flatMap((group) => {
+    const [latest, ...previousRows] = group;
+    if (!latest || previousRows.length === 0) return [];
+    const previousPrices = previousRows.map((row) => Number(row.sellPriceMin)).filter((price) => price > 0);
+    if (!previousPrices.length) return [];
+    const averagePrevious = previousPrices.reduce((sum, price) => sum + price, 0) / previousPrices.length;
+    if (latest.sellPriceMin >= averagePrevious) return [];
+    const dropAmount = averagePrevious - latest.sellPriceMin;
+    const dropPercent = averagePrevious > 0 ? (dropAmount / averagePrevious) * 100 : 0;
+
+    return [{
+      ...latest,
+      averagePrevious,
+      dropAmount,
+      dropPercent,
+      sampleSize: previousPrices.length,
+    }];
+  })
+    .sort((first, second) => second.dropPercent - first.dropPercent)
+    .slice(0, limit);
+};

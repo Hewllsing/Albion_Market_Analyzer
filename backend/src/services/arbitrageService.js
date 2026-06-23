@@ -1,21 +1,7 @@
 import { env } from '../config/env.js';
+import { calculateOpportunityScore, estimateOpportunityRisk, getOpportunityRecommendation } from '../utils/opportunity.js';
 import { calculateArbitrage } from '../utils/profit.js';
 import { fetchMarketPrices } from './marketService.js';
-
-const hoursSince = (dateValue) => {
-  if (!dateValue) return Infinity;
-  return Math.max(0, (Date.now() - new Date(dateValue).getTime()) / 3_600_000);
-};
-
-const estimateRisk = (purchase, sale) => {
-  const staleness = Math.max(
-    hoursSince(purchase.sellPriceMinDate),
-    hoursSince(sale.buyPriceMaxDate),
-  );
-  if (staleness > 8) return { level: 'Alto', score: 3, reason: 'Preco com mais de 8h' };
-  if (staleness > 3) return { level: 'Medio', score: 2, reason: 'Preco com mais de 3h' };
-  return { level: 'Baixo', score: 1, reason: 'Precos recentes' };
-};
 
 export const findArbitrageOpportunities = async ({
   itemIds,
@@ -28,6 +14,7 @@ export const findArbitrageOpportunities = async ({
   originCity,
   destinationCity,
   limit = 100,
+  sortBy = 'profit',
 }) => {
   const result = await fetchMarketPrices({ itemIds, cities, qualities, server });
   const grouped = new Map();
@@ -55,6 +42,21 @@ export const findArbitrageOpportunities = async ({
           marketTaxRate,
         });
         if (profit.netProfit < minimumProfit || profit.marginPercent < minimumMargin) return;
+        const updatedAtDates = [purchase.sellPriceMinDate, sale.buyPriceMaxDate].filter(Boolean);
+        const risk = estimateOpportunityRisk({
+          purchaseCity: purchase.city,
+          saleCity: sale.city,
+          updatedAtDates,
+          hasImmediateSale: true,
+          marginPercent: profit.marginPercent,
+        });
+        const opportunityScore = calculateOpportunityScore({
+          marginPercent: profit.marginPercent,
+          risk,
+          updatedAtDates,
+          hasImmediateSale: true,
+          netProfit: profit.netProfit,
+        });
 
         opportunities.push({
           itemId: purchase.itemId,
@@ -67,7 +69,9 @@ export const findArbitrageOpportunities = async ({
           purchasePrice: purchase.sellPriceMin,
           salePrice: sale.buyPriceMax,
           ...profit,
-          risk: estimateRisk(purchase, sale),
+          risk,
+          opportunityScore,
+          opportunityRecommendation: getOpportunityRecommendation(opportunityScore),
           purchaseUpdatedAt: purchase.sellPriceMinDate,
           saleUpdatedAt: sale.buyPriceMaxDate,
         });
@@ -75,7 +79,11 @@ export const findArbitrageOpportunities = async ({
     });
   });
 
-  opportunities.sort((first, second) => second.netProfit - first.netProfit);
+  opportunities.sort((first, second) => (
+    sortBy === 'score'
+      ? second.opportunityScore - first.opportunityScore || second.netProfit - first.netProfit
+      : second.netProfit - first.netProfit
+  ));
   return {
     data: opportunities.slice(0, limit),
     meta: { ...result.meta, opportunityCount: opportunities.length, marketTaxRate },

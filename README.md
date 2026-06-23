@@ -4,7 +4,7 @@ Aplicacao web para transformar precos publicos do Albion Online em decisoes de a
 
 ## Status do desenvolvimento
 
-Estamos trabalhando por fases. A fase ativa e a **Fase 1 - MVP pessoal**, com foco em uma ferramenta funcional para uso individual antes de evoluir para ranking avancado, multiusuario, alertas ou monetizacao.
+Estamos trabalhando por fases. A **Fase 1 - MVP pessoal** esta concluida. A **Fase 2 - Ferramenta avancada de lucro** adiciona rankings, Opportunity Score, risco estimado e leitura de quedas de preco antes de evoluir para multiusuario, alertas ou monetizacao.
 
 ## Recursos
 
@@ -12,6 +12,9 @@ Estamos trabalhando por fases. A fase ativa e a **Fase 1 - MVP pessoal**, com fo
 - Consulta de precos por item, servidor, cidade, categoria, tier, qualidade, preco minimo e margem minima.
 - Arbitragem entre cidades com lucro bruto, taxa, lucro liquido, margem e risco.
 - Simulador de crafting com taxa da estacao, retorno de recursos, Focus e quantidade.
+- Rankings Top 10 para arbitragem, crafting, refino, consumiveis, Black Market, quedas de preco e maior margem.
+- Opportunity Score 0-100 com recomendacao: Forte oportunidade, Boa oportunidade, Monitorar ou Evitar.
+- Risco estimado por frescor, rota, distancia, liquidez aproximada, variacao recente e margem anomala.
 - Historico de precos capturado durante as consultas.
 - Cache em memoria para reduzir chamadas repetidas ao servico comunitario.
 - Catalogo inicial com pocoes, comidas, recursos T4-T8 e equipamentos PvP comuns.
@@ -92,6 +95,8 @@ Abra `http://localhost:5173`. A API fica em `http://localhost:3000`.
 | GET | `/api/market/prices` | Precos por item/cidade/qualidade/servidor com filtros de preco e margem |
 | GET | `/api/market/arbitrage` | Comparacao de compra e venda entre cidades |
 | GET | `/api/market/crafting-profit` | Ranking ou simulacao de um item |
+| GET | `/api/market/refining-profit` | Ranking ou simulacao inicial de refino |
+| GET | `/api/market/rankings` | Rankings consolidados da Fase 2 |
 | GET | `/api/market/history` | Historico persistido |
 | GET/POST/DELETE | `/api/watchlist` | Reservado para fases futuras |
 
@@ -105,6 +110,12 @@ Exemplo de crafting:
 
 ```text
 GET /api/market/crafting-profit?itemId=T6_MAIN_SWORD&materialCity=Thetford&saleCity=Caerleon&quantity=10&marketTaxRate=0.065&resourceReturnRate=0.152
+```
+
+Exemplo de rankings da Fase 2:
+
+```text
+GET /api/market/rankings?server=europe&limit=10
 ```
 
 Listas podem ser separadas por virgula nos parametros `items`, `cities` e `qualities`. Servidores aceitos: `europe`, `americas` e `asia`.
@@ -128,6 +139,14 @@ margemPercentual = lucroLiquido / precoCompra * 100
 
 Crafting considera consumo efetivo aproximado de `quantidadeMaterial * (1 - retornoRecursos)` e receita pelo menor `sell_price_min`, simulando uma listagem competitiva. A taxa da estacao e aplicada sobre esse custo efetivo. Focus usa 47,9% apenas quando o retorno foi deixado em zero, para que uma taxa informada pelo usuario sempre prevaleca.
 
+Opportunity Score:
+
+```text
+score = margem + liquidez aproximada + atualizacao recente - risco
+```
+
+O score usa margem limitada, presenca de venda imediata/listagem, idade das cotacoes, lucro positivo e penalidade de risco. O risco combina rota, distancia estimada, frescor do preco, liquidez nao imediata, variacao recente e margens muito fora do normal.
+
 ## Verificacao
 
 ```bash
@@ -137,10 +156,10 @@ npm test
 npm run build
 ```
 
-Para validar com dados reais, suba a API e consulte `/api/health`, `/api/market/prices`, `/api/market/history`, `/api/market/arbitrage` e `/api/market/crafting-profit`.
+Para validar com dados reais, suba a API e consulte `/api/health`, `/api/market/prices`, `/api/market/history`, `/api/market/arbitrage`, `/api/market/crafting-profit`, `/api/market/refining-profit` e `/api/market/rankings`.
 
 ## Limites dos dados
 
-O Albion Online Data Project e comunitario. Um preco recente nao garante que a ordem ainda exista ou tenha volume suficiente. A classificacao de risco usa somente a idade das cotacoes: ate 3h e baixo, de 3h a 8h e medio, acima de 8h e alto. Custos de transporte, risco de emboscada, journals, bonus locais e nutricionamento da estacao ainda nao entram no calculo.
+O Albion Online Data Project e comunitario. Um preco recente nao garante que a ordem ainda exista ou tenha volume suficiente. O score usa liquidez aproximada porque a API publica preco e data, nao volume real de ordens. Custos de transporte, risco de emboscada, journals, bonus locais e nutricionamento da estacao ainda nao entram no calculo.
 
-As receitas iniciais sao deliberadamente pequenas e ficam em `backend/src/data/recipes.js`. Essa fronteira permite substituir o seed por uma fonte completa de dados do jogo sem alterar controllers ou interface.
+As receitas iniciais de crafting e refino sao deliberadamente pequenas e ficam em `backend/src/data/recipes.js` e `backend/src/data/refiningRecipes.js`. Essa fronteira permite substituir o seed por uma fonte completa de dados do jogo sem alterar controllers ou interface. O ranking de queda de preco depende de historico suficiente no banco; em bases novas ele pode aparecer vazio ate existirem variacoes reais.

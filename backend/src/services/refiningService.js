@@ -1,7 +1,7 @@
 import { DEFAULT_CITIES } from '../config/market.js';
 import { env } from '../config/env.js';
 import { itemById } from '../data/items.js';
-import { recipeByItemId, recipes } from '../data/recipes.js';
+import { refiningRecipeByItemId, refiningRecipes } from '../data/refiningRecipes.js';
 import { AppError } from '../utils/AppError.js';
 import { calculateOpportunityScore, estimateOpportunityRisk, getOpportunityRecommendation } from '../utils/opportunity.js';
 import { calculateCraftingProfit, getRecommendation } from '../utils/profit.js';
@@ -11,34 +11,25 @@ const selectLowestSell = (prices, itemId, city) => prices
   .filter((price) => price.itemId === itemId && price.city === city && price.sellPriceMin > 0)
   .sort((first, second) => first.sellPriceMin - second.sellPriceMin)[0];
 
-const selectCompetitiveSale = (prices, itemId, city) => prices
-  .filter((price) => price.itemId === itemId && price.city === city && price.sellPriceMin > 0)
-  .sort((first, second) => first.sellPriceMin - second.sellPriceMin)[0];
-
-export const calculateItemCraftingProfit = async ({
+export const calculateItemRefiningProfit = async ({
   itemId,
-  materialCity,
-  saleCity,
-  craftCity,
+  materialCity = 'Bridgewatch',
+  saleCity = 'Caerleon',
   quantity = 1,
   stationFeeRate = 0,
-  resourceReturnRate = 0,
+  resourceReturnRate = 0.152,
   marketTaxRate = env.defaultMarketTax,
-  useFocus = false,
   server = 'europe',
 }) => {
-  const recipe = recipeByItemId.get(itemId);
-  if (!recipe) throw new AppError('Nao ha receita cadastrada para este item.', 404);
+  const recipe = refiningRecipeByItemId.get(itemId);
+  if (!recipe) throw new AppError('Nao ha receita de refino cadastrada para este item.', 404);
 
-  const effectiveReturnRate = useFocus && resourceReturnRate === 0 ? 0.479 : resourceReturnRate;
   const itemIds = [itemId, ...recipe.materials.map((material) => material.itemId)];
-  const locations = [...new Set([materialCity, saleCity, craftCity].filter(Boolean))];
+  const locations = [...new Set([materialCity, saleCity].filter(Boolean))];
   const result = await fetchMarketPrices({ itemIds, cities: locations, qualities: [1], server });
   const materialPrices = recipe.materials.map((material) => {
     const price = selectLowestSell(result.data, material.itemId, materialCity);
-    if (!price) {
-      throw new AppError(`Sem preco de venda para ${material.itemId} em ${materialCity}.`, 422);
-    }
+    if (!price) throw new AppError(`Sem preco de venda para ${material.itemId} em ${materialCity}.`, 422);
     return {
       ...material,
       itemName: itemById.get(material.itemId)?.name || material.itemId,
@@ -46,7 +37,7 @@ export const calculateItemCraftingProfit = async ({
       updatedAt: price.sellPriceMinDate,
     };
   });
-  const outputPrice = selectCompetitiveSale(result.data, itemId, saleCity);
+  const outputPrice = selectLowestSell(result.data, itemId, saleCity);
   if (!outputPrice) throw new AppError(`Sem preco de venda para ${itemId} em ${saleCity}.`, 422);
 
   const profit = calculateCraftingProfit({
@@ -55,7 +46,7 @@ export const calculateItemCraftingProfit = async ({
     salePrice: outputPrice.sellPriceMin,
     marketTaxRate,
     stationFeeRate,
-    resourceReturnRate: effectiveReturnRate,
+    resourceReturnRate,
   });
   const updatedAtDates = [
     outputPrice.sellPriceMinDate,
@@ -80,12 +71,12 @@ export const calculateItemCraftingProfit = async ({
     data: {
       itemId,
       itemName: itemById.get(itemId)?.name || itemId,
+      category: itemById.get(itemId)?.category || 'Recursos refinados',
+      tier: itemById.get(itemId)?.tier,
       materialCity,
-      craftCity,
       saleCity,
       quantity,
-      useFocus,
-      resourceReturnRate: effectiveReturnRate,
+      resourceReturnRate,
       marketTaxRate,
       stationFeeRate,
       salePrice: outputPrice.sellPriceMin,
@@ -101,29 +92,26 @@ export const calculateItemCraftingProfit = async ({
   };
 };
 
-export const rankCraftingOpportunities = async ({
-  itemIds = recipes.map((recipe) => recipe.itemId),
-  materialCity = 'Caerleon',
+export const rankRefiningOpportunities = async ({
+  itemIds = refiningRecipes.map((recipe) => recipe.itemId),
+  materialCity = 'Bridgewatch',
   saleCity = 'Caerleon',
   server = 'europe',
   marketTaxRate = env.defaultMarketTax,
   stationFeeRate = 0,
-  resourceReturnRate = 0,
-  useFocus = false,
+  resourceReturnRate = 0.152,
   limit = 10,
 }) => {
-  const selectedRecipes = itemIds.filter((itemId) => recipeByItemId.has(itemId));
+  const selectedRecipes = itemIds.filter((itemId) => refiningRecipeByItemId.has(itemId));
   const settled = await Promise.allSettled(selectedRecipes.map((itemId) =>
-    calculateItemCraftingProfit({
+    calculateItemRefiningProfit({
       itemId,
       materialCity,
       saleCity,
-      craftCity: materialCity,
       quantity: 1,
       stationFeeRate,
       resourceReturnRate,
       marketTaxRate,
-      useFocus,
       server,
     })));
 

@@ -13,4 +13,18 @@ export const DEFAULT_CITIES = [
   'Thetford',
 ];
 
+export const BLACK_MARKET_CITY = 'Black Market';
+
+export const MARKET_CITIES = [...DEFAULT_CITIES, BLACK_MARKET_CITY];
+
 export const DEFAULT_QUALITIES = [1, 2, 3, 4, 5];
+
+export const CITY_ROUTE_RISK = {
+  Bridgewatch: 1,
+  'Fort Sterling': 1,
+  Lymhurst: 1,
+  Martlock: 1,
+  Thetford: 1,
+  Caerleon: 3,
+  [BLACK_MARKET_CITY]: 4,
+};

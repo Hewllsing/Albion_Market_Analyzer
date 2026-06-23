@@ -6,6 +6,8 @@ import { findArbitrageOpportunities } from '../services/arbitrageService.js';
 import { calculateItemCraftingProfit, rankCraftingOpportunities } from '../services/craftingService.js';
 import { findItems } from '../services/itemService.js';
 import { fetchMarketPrices } from '../services/marketService.js';
+import { getOpportunityRankings } from '../services/rankingService.js';
+import { calculateItemRefiningProfit, rankRefiningOpportunities } from '../services/refiningService.js';
 import { parseBoolean, parseCsv, parseNumber } from '../utils/query.js';
 
 const resolveItemIds = (query, { craftingOnly = false } = {}) => {
@@ -41,6 +43,7 @@ export const getArbitrage = async (request, response) => {
     originCity: request.query.originCity,
     destinationCity: request.query.destinationCity,
     limit: parseNumber(request.query.limit, 100, { min: 1, max: 500 }),
+    sortBy: request.query.sortBy || 'profit',
   });
   response.json(result);
 };
@@ -68,6 +71,38 @@ export const getCraftingProfit = async (request, response) => {
       itemIds: resolveItemIds(request.query, { craftingOnly: true }),
       limit: parseNumber(request.query.limit, 10, { min: 1, max: 50 }),
     });
+  response.json(result);
+};
+
+export const getRefiningProfit = async (request, response) => {
+  const common = {
+    materialCity: request.query.materialCity || 'Bridgewatch',
+    saleCity: request.query.saleCity || 'Caerleon',
+    server: request.query.server || 'europe',
+    stationFeeRate: parseNumber(request.query.stationFeeRate, 0, { min: 0, max: 1 }),
+    resourceReturnRate: parseNumber(request.query.resourceReturnRate, 0.152, { min: 0, max: 0.95 }),
+    marketTaxRate: parseNumber(request.query.marketTaxRate, env.defaultMarketTax, { min: 0, max: 1 }),
+  };
+
+  const result = request.query.itemId
+    ? await calculateItemRefiningProfit({
+      ...common,
+      itemId: request.query.itemId,
+      quantity: parseNumber(request.query.quantity, 1, { min: 1, max: 100000 }),
+    })
+    : await rankRefiningOpportunities({
+      ...common,
+      limit: parseNumber(request.query.limit, 10, { min: 1, max: 50 }),
+    });
+  response.json(result);
+};
+
+export const getRankings = async (request, response) => {
+  const result = await getOpportunityRankings({
+    server: request.query.server || 'europe',
+    marketTaxRate: parseNumber(request.query.marketTaxRate, env.defaultMarketTax, { min: 0, max: 1 }),
+    limit: parseNumber(request.query.limit, 10, { min: 1, max: 25 }),
+  });
   response.json(result);
 };
 
