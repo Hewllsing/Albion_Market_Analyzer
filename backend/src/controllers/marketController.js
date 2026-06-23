@@ -3,7 +3,11 @@ import { DEFAULT_CITIES, DEFAULT_QUALITIES } from '../config/market.js';
 import { isDatabaseConfigured } from '../database/connection.js';
 import { findMarketHistory } from '../models/marketPriceModel.js';
 import { findArbitrageOpportunities } from '../services/arbitrageService.js';
-import { calculateItemCraftingProfit, rankCraftingOpportunities } from '../services/craftingService.js';
+import {
+  calculateItemCraftingProfit,
+  getCraftingItemIdsByGroup,
+  rankCraftingOpportunities,
+} from '../services/craftingService.js';
 import { findItems } from '../services/itemService.js';
 import { fetchMarketPrices } from '../services/marketService.js';
 import { getOpportunityRankings } from '../services/rankingService.js';
@@ -13,9 +17,35 @@ import { parseBoolean, parseCsv, parseNumber } from '../utils/query.js';
 const resolveItemIds = (query, { craftingOnly = false } = {}) => {
   const explicitItems = parseCsv(query.items);
   if (explicitItems.length) return explicitItems;
-  return findItems({ category: query.category, tier: query.tier })
+  const scope = query.category || query.tier || query.search ? undefined : 'market';
+  return findItems({ category: query.category, tier: query.tier, search: query.search, scope })
     .filter((item) => !craftingOnly || ['Armas', 'Armaduras'].includes(item.category))
     .map((item) => item.itemId);
+};
+
+const parseManualMaterialPrices = (value) => {
+  if (!value) return {};
+  if (typeof value === 'object') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return Object.fromEntries(String(value)
+      .split(',')
+      .map((entry) => entry.trim().split(/[:=]/))
+      .filter(([itemId, price]) => itemId && price)
+      .map(([itemId, price]) => [itemId, Number(price)]));
+  }
+};
+
+const resolveCraftingItemIds = (query) => {
+  const explicitItems = parseCsv(query.items);
+  if (explicitItems.length) return explicitItems;
+  const craftGroup = query.craftGroup || query.group;
+  const groupItems = getCraftingItemIdsByGroup(craftGroup, {
+    includeEnchantments: parseBoolean(query.includeEnchantments),
+  });
+  const catalogItems = findItems({ category: query.category, tier: query.tier }).map((item) => item.itemId);
+  return groupItems.filter((itemId) => catalogItems.includes(itemId));
 };
 
 export const getPrices = async (request, response) => {
@@ -56,8 +86,11 @@ export const getCraftingProfit = async (request, response) => {
     server: request.query.server || 'europe',
     stationFeeRate: parseNumber(request.query.stationFeeRate, 0, { min: 0, max: 1 }),
     resourceReturnRate: parseNumber(request.query.resourceReturnRate, 0, { min: 0, max: 0.95 }),
+    focusReturnRate: parseNumber(request.query.focusReturnRate, 0.479, { min: 0, max: 0.95 }),
     marketTaxRate: parseNumber(request.query.marketTaxRate, env.defaultMarketTax, { min: 0, max: 1 }),
     useFocus: parseBoolean(request.query.useFocus),
+    manualMaterialPrices: parseManualMaterialPrices(request.query.materialPrices),
+    manualSalePrice: request.query.salePrice,
   };
 
   const result = request.query.itemId
@@ -68,7 +101,8 @@ export const getCraftingProfit = async (request, response) => {
     })
     : await rankCraftingOpportunities({
       ...common,
-      itemIds: resolveItemIds(request.query, { craftingOnly: true }),
+      itemIds: resolveCraftingItemIds(request.query),
+      craftGroup: request.query.craftGroup || request.query.group,
       limit: parseNumber(request.query.limit, 10, { min: 1, max: 50 }),
     });
   response.json(result);

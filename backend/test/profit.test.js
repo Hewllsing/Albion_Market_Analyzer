@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { filterMarketPrices } from '../src/services/marketService.js';
+import { getCraftingItemIdsByGroup } from '../src/services/craftingService.js';
 import {
   calculateOpportunityScore,
   estimateOpportunityRisk,
@@ -29,9 +30,20 @@ test('calcula crafting com retorno, taxa de estacao e quantidade', () => {
     resourceReturnRate: 0.2,
   });
   assert.equal(result.materialCost, 1600);
+  assert.equal(result.materialGrossCost, 2000);
   assert.equal(result.stationFee, 160);
+  assert.equal(result.netSaleRevenue, 2280);
   assert.equal(result.netProfit, 520);
   assert.equal(result.profitPerUnit, 260);
+  assert.equal(result.materials[0].requiredQuantity, 20);
+  assert.equal(result.materials[0].effectiveQuantity, 16);
+  assert.equal(result.materials[0].effectiveCost, 1600);
+});
+
+test('lista grupos exclusivos de crafting', () => {
+  assert.ok(getCraftingItemIdsByGroup('food').includes('T4_MEAL_STEW'));
+  assert.ok(getCraftingItemIdsByGroup('potions').includes('T4_POTION_HEAL'));
+  assert.ok(getCraftingItemIdsByGroup('equipment').includes('T4_MAIN_SWORD'));
 });
 
 test('gera recomendacao por margem', () => {

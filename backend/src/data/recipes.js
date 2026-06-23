@@ -1,28 +1,44 @@
-const gearRecipe = (itemId, materialItemId, quantity) => ({
-  itemId,
-  materials: [{ itemId: materialItemId, quantity }],
-});
+import { generatedCraftingRecipes } from './generatedCraftingData.js';
 
-export const recipes = [
-  gearRecipe('T4_MAIN_SWORD', 'T4_METALBAR', 16),
-  gearRecipe('T5_MAIN_SWORD', 'T5_METALBAR', 16),
-  gearRecipe('T6_MAIN_SWORD', 'T6_METALBAR', 16),
-  gearRecipe('T7_MAIN_SWORD', 'T7_METALBAR', 16),
-  gearRecipe('T8_MAIN_SWORD', 'T8_METALBAR', 16),
-  gearRecipe('T4_2H_BOW', 'T4_PLANKS', 32),
-  gearRecipe('T5_2H_BOW', 'T5_PLANKS', 32),
-  gearRecipe('T6_2H_BOW', 'T6_PLANKS', 32),
-  gearRecipe('T7_2H_BOW', 'T7_PLANKS', 32),
-  gearRecipe('T8_2H_BOW', 'T8_PLANKS', 32),
-  gearRecipe('T4_ARMOR_PLATE_SET1', 'T4_METALBAR', 16),
-  gearRecipe('T5_ARMOR_PLATE_SET1', 'T5_METALBAR', 16),
-  gearRecipe('T6_ARMOR_PLATE_SET1', 'T6_METALBAR', 16),
-  gearRecipe('T4_ARMOR_LEATHER_SET1', 'T4_LEATHER', 16),
-  gearRecipe('T5_ARMOR_LEATHER_SET1', 'T5_LEATHER', 16),
-  gearRecipe('T6_ARMOR_LEATHER_SET1', 'T6_LEATHER', 16),
-  gearRecipe('T4_ARMOR_CLOTH_SET1', 'T4_CLOTH', 16),
-  gearRecipe('T5_ARMOR_CLOTH_SET1', 'T5_CLOTH', 16),
-  gearRecipe('T6_ARMOR_CLOTH_SET1', 'T6_CLOTH', 16),
+export const craftingGroups = [
+  { key: 'food', label: 'Comidas', categories: ['Comidas'] },
+  { key: 'potions', label: 'Pocoes', categories: ['Pocoes'] },
+  { key: 'equipment', label: 'Equipamentos', categories: ['Armas', 'Armaduras'] },
 ];
 
-export const recipeByItemId = new Map(recipes.map((recipe) => [recipe.itemId, recipe]));
+export const recipes = generatedCraftingRecipes;
+
+export const recipeByItemId = new Map(recipes.map((entry) => [entry.itemId, entry]));
+
+export const defaultCraftingRankingItemIds = [
+  'T4_MEAL_STEW',
+  'T5_MEAL_STEW',
+  'T6_MEAL_STEW',
+  'T4_MEAL_SANDWICH',
+  'T5_MEAL_SANDWICH',
+  'T6_MEAL_SANDWICH',
+  'T4_POTION_HEAL',
+  'T6_POTION_HEAL',
+  'T4_POTION_ENERGY',
+  'T6_POTION_ENERGY',
+  'T4_MAIN_SWORD',
+  'T5_MAIN_SWORD',
+  'T6_MAIN_SWORD',
+  'T4_2H_BOW',
+  'T5_2H_BOW',
+  'T6_2H_BOW',
+  'T4_MAIN_FIRESTAFF',
+  'T5_MAIN_FIRESTAFF',
+  'T6_MAIN_FIRESTAFF',
+  'T4_ARMOR_PLATE_SET1',
+  'T5_ARMOR_PLATE_SET1',
+  'T6_ARMOR_PLATE_SET1',
+  'T4_ARMOR_LEATHER_SET1',
+  'T5_ARMOR_LEATHER_SET1',
+  'T6_ARMOR_LEATHER_SET1',
+  'T4_ARMOR_CLOTH_SET1',
+  'T5_ARMOR_CLOTH_SET1',
+  'T6_ARMOR_CLOTH_SET1',
+].filter((itemId) => recipeByItemId.has(itemId));
+
+export const getRecipeGroup = (itemId) => recipeByItemId.get(itemId)?.group || null;

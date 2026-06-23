@@ -5,6 +5,7 @@ export const getItems = (request, response) => {
     category: request.query.category,
     tier: request.query.tier,
     search: request.query.search,
+    scope: request.query.scope,
   });
   response.json({ data: catalog.items, meta: { categories: catalog.categories, tiers: catalog.tiers } });
 };

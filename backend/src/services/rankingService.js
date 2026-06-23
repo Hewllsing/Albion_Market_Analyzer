@@ -1,6 +1,6 @@
 import { BLACK_MARKET_CITY, DEFAULT_CITIES } from '../config/market.js';
 import { env } from '../config/env.js';
-import { items } from '../data/items.js';
+import { marketItems } from '../data/items.js';
 import { findPriceDropOpportunities } from '../models/marketPriceModel.js';
 import { calculateOpportunityScore, estimateOpportunityRisk, getOpportunityRecommendation } from '../utils/opportunity.js';
 import { calculateArbitrage } from '../utils/profit.js';
@@ -18,7 +18,7 @@ const safeRanking = async (name, task) => {
   }
 };
 
-const idsByCategories = (categories) => findItems()
+const idsByCategories = (categories) => findItems({ scope: 'market' })
   .filter((item) => categories.includes(item.category))
   .map((item) => item.itemId);
 
@@ -28,7 +28,7 @@ const buildHighMarginRanking = async ({
   limit,
 }) => {
   const result = await fetchMarketPrices({
-    itemIds: items.map((item) => item.itemId),
+    itemIds: marketItems.map((item) => item.itemId),
     cities: DEFAULT_CITIES,
     qualities: [1],
     server,
@@ -159,7 +159,7 @@ export const getOpportunityRankings = async ({
     marginTop,
   ] = await Promise.all([
     safeRanking('arbitrageTop', () => findArbitrageOpportunities({
-      itemIds: items.map((item) => item.itemId),
+      itemIds: marketItems.map((item) => item.itemId),
       cities: DEFAULT_CITIES,
       qualities: [1],
       server,

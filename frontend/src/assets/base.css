@@ -214,6 +214,11 @@ input:disabled { opacity: .45; }
 
 .craft-layout { display: grid; grid-template-columns: minmax(350px, .8fr) minmax(420px, 1.2fr); gap: 18px; align-items: start; }
 .craft-form { position: sticky; top: 88px; }
+.craft-tabs { margin-bottom: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.craft-tabs button { min-height: 70px; padding: 11px; display: flex; flex-direction: column; justify-content: center; gap: 4px; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); background: #0c121b; text-align: left; }
+.craft-tabs button.active { color: var(--text); border-color: rgba(217,173,88,.58); background: rgba(217,173,88,.08); }
+.craft-tabs strong { font-size: 12px; }
+.craft-tabs small { color: var(--muted); font-size: 8px; line-height: 1.35; text-transform: none; }
 .form-grid { margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .toggle-field { min-height: 40px; padding: 7px 9px; flex-direction: row; align-items: center; gap: 9px; border: 1px solid var(--line); border-radius: 6px; background: #0c121b; }
 .toggle-field input { width: 15px; height: 15px; accent-color: var(--gold); }
@@ -222,6 +227,8 @@ input:disabled { opacity: .45; }
 .toggle-field small { color: var(--muted); font-size: 8px; text-transform: none; }
 .form-footnote { margin: 12px 0 0; color: #697588; font-size: 9px; line-height: 1.5; }
 .craft-result { min-width: 0; }
+.missing-price-panel { margin-bottom: 18px; border-color: rgba(229,182,95,.28); background: linear-gradient(145deg, rgba(229,182,95,.08), transparent 60%), var(--surface); }
+.missing-price-panel > p { color: var(--muted); font-size: 11px; line-height: 1.55; }
 .recommendation-card { min-height: 185px; margin-bottom: 18px; padding: 27px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
 .recommendation-card h2 { margin-bottom: 4px; font-size: 34px; }
 .recommendation-card > p:not(.eyebrow) { color: var(--muted); font-size: 11px; }
@@ -234,6 +241,12 @@ input:disabled { opacity: .45; }
 .recommendation-warning h2 { color: var(--warning); }
 .recommendation-negative { border-color: rgba(241,123,119,.2); }
 .recommendation-negative h2 { color: var(--red); }
+.scenario-grid { margin-bottom: 18px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.scenario-card { padding: 18px; }
+.scenario-card h2 { margin-bottom: 12px; font-size: 24px; }
+.scenario-positive h2 { color: var(--green); }
+.scenario-warning h2 { color: var(--warning); }
+.scenario-negative h2 { color: var(--red); }
 .breakdown-panel { margin-bottom: 18px; }
 .margin-highlight { color: var(--green); font-size: 20px; }
 .breakdown-list { margin: 0; }
@@ -242,7 +255,11 @@ input:disabled { opacity: .45; }
 .breakdown-list dd { margin: 0; color: var(--text); font: 600 11px 'Manrope'; }
 .breakdown-list .total-line { margin-top: 3px; border-top: 1px solid var(--line); }
 .breakdown-list .profit-line dd { color: var(--green); }
-.material-row { padding: 10px 0; display: flex; justify-content: space-between; border-bottom: 1px solid var(--line-soft); color: var(--muted); font-size: 10px; }
+.material-row { padding: 12px 0; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(110px, auto) minmax(90px, auto); align-items: center; gap: 12px; border-bottom: 1px solid var(--line-soft); color: var(--muted); font-size: 10px; }
+.material-row > span:first-child { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.material-row strong { overflow: hidden; color: var(--text); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.material-row small { color: #637086; font-size: 8px; }
+.material-row > span:not(:first-child) { text-align: right; }
 
 .watchlist-layout { display: grid; grid-template-columns: 320px 1fr; gap: 18px; align-items: start; }
 .compact-form { position: sticky; top: 88px; display: grid; gap: 14px; }
@@ -304,7 +321,11 @@ input:disabled { opacity: .45; }
   .filter-panel-prices { grid-template-columns: 1fr 1fr; }
   .filter-item { grid-column: 1 / -1; }
   .filter-search { grid-column: 1 / -1; }
+  .craft-tabs { grid-template-columns: 1fr; }
   .form-grid { grid-template-columns: 1fr; }
+  .scenario-grid { grid-template-columns: 1fr; }
+  .material-row { grid-template-columns: 1fr; }
+  .material-row > span:not(:first-child) { text-align: left; }
   .watch-grid { grid-template-columns: 1fr; }
   .method-note { flex-direction: column; }
   .server-control label { display: none; }

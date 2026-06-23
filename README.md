@@ -11,7 +11,10 @@ Estamos trabalhando por fases. A **Fase 1 - MVP pessoal**, a **Fase 2 - Ferramen
 - Dashboard com melhores arbitragens, melhores crafts, itens com maior margem, precos abaixo da media e ultimas atualizacoes da API.
 - Consulta de precos por item, servidor, cidade, categoria, tier, qualidade, preco minimo e margem minima.
 - Arbitragem entre cidades com lucro bruto, taxa, lucro liquido, margem e risco.
-- Simulador de crafting com taxa da estacao, retorno de recursos, Focus e quantidade.
+- Simulador de crafting com secoes exclusivas para comidas, pocoes e equipamentos.
+- Comparacao de crafting sem/com Focus, detalhando materiais, custo para craftar, custo para vender, receita liquida e margem.
+- Catalogo de crafting gerado a partir do dump publico `ao-data/ao-bin-dumps`, incluindo comidas, pocoes, equipamentos e encantamentos com receitas oficiais.
+- Precos manuais para materiais ou item final quando o Albion Online Data Project nao trouxer cotacao suficiente.
 - Rankings Top 10 para arbitragem, crafting, refino, consumiveis, Black Market, quedas de preco e maior margem.
 - Opportunity Score 0-100 com recomendacao: Forte oportunidade, Boa oportunidade, Monitorar ou Evitar.
 - Risco estimado por frescor, rota, distancia, liquidez aproximada, variacao recente e margem anomala.
@@ -190,6 +193,13 @@ npm run build
 Para validar com dados reais, suba a API e consulte `/api/health`, `/api/market/prices`, `/api/market/history`, `/api/market/arbitrage`, `/api/market/crafting-profit`, `/api/market/refining-profit` e `/api/market/rankings`.
 
 Para validar a Fase 3, crie uma conta em `/login`, acesse `/my`, edite preferencias em `/profile`, adicione um item em `/watchlist` e confirme que os dados aparecem isolados para o utilizador autenticado.
+
+Para atualizar o catalogo completo de crafting a partir do dump publico do Albion:
+
+```bash
+node scripts/sync-albion-crafting-data.mjs
+npm run db:seed -w backend
+```
 
 ## Limites dos dados
 
