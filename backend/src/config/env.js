@@ -23,6 +23,11 @@ export const env = {
   marketCacheTtlMs: toNumber(process.env.MARKET_CACHE_TTL_MS, 120000),
   marketRequestTimeoutMs: toNumber(process.env.MARKET_REQUEST_TIMEOUT_MS, 15000),
   defaultMarketTax: toNumber(process.env.DEFAULT_MARKET_TAX, 0.065),
+  auth: {
+    jwtSecret: readEnv('JWT_SECRET') || 'development-only-change-me',
+    tokenTtlSeconds: toNumber(readEnv('AUTH_TOKEN_TTL_SECONDS'), 60 * 60 * 24 * 7),
+    passwordResetTtlMinutes: toNumber(readEnv('PASSWORD_RESET_TTL_MINUTES'), 30),
+  },
   database: {
     host: readEnv('DB_HOST', 'DB_HOST_MYSQL'),
     port: toNumber(readEnv('DB_PORT', 'DB_PORT_MYSQL'), 3306),

@@ -3,8 +3,10 @@ import express from 'express';
 import helmet from 'helmet';
 import { env } from './config/env.js';
 import { checkDatabaseConnection } from './database/connection.js';
+import authRoutes from './routes/authRoutes.js';
 import itemRoutes from './routes/itemRoutes.js';
 import marketRoutes from './routes/marketRoutes.js';
+import userRoutes from './routes/userRoutes.js';
 import watchlistRoutes from './routes/watchlistRoutes.js';
 
 export const createApp = () => {
@@ -25,8 +27,10 @@ export const createApp = () => {
       },
     });
   });
+  app.use('/api/auth', authRoutes);
   app.use('/api/market', marketRoutes);
   app.use('/api/items', itemRoutes);
+  app.use('/api/user', userRoutes);
   app.use('/api/watchlist', watchlistRoutes);
 
   app.use((request, response) => {

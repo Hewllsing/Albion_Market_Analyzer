@@ -4,7 +4,7 @@ Aplicacao web para transformar precos publicos do Albion Online em decisoes de a
 
 ## Status do desenvolvimento
 
-Estamos trabalhando por fases. A **Fase 1 - MVP pessoal** esta concluida. A **Fase 2 - Ferramenta avancada de lucro** adiciona rankings, Opportunity Score, risco estimado e leitura de quedas de preco antes de evoluir para multiusuario, alertas ou monetizacao.
+Estamos trabalhando por fases. A **Fase 1 - MVP pessoal**, a **Fase 2 - Ferramenta avancada de lucro** e a **Fase 3 - Sistema de utilizadores e dashboard individual** estao concluidas e testadas. A base atual ja suporta contas, preferencias pessoais, watchlist propria, favoritos, oportunidades salvas, historico de analises e metas de lucro antes de evoluir para alertas, notificacoes ou monetizacao.
 
 ## Recursos
 
@@ -15,6 +15,11 @@ Estamos trabalhando por fases. A **Fase 1 - MVP pessoal** esta concluida. A **Fa
 - Rankings Top 10 para arbitragem, crafting, refino, consumiveis, Black Market, quedas de preco e maior margem.
 - Opportunity Score 0-100 com recomendacao: Forte oportunidade, Boa oportunidade, Monitorar ou Evitar.
 - Risco estimado por frescor, rota, distancia, liquidez aproximada, variacao recente e margem anomala.
+- Cadastro, login, sessao autenticada e recuperacao de senha por token.
+- Perfil do utilizador com servidor principal, cidade principal, idioma, moeda/servidor, tipo de jogador, taxa de mercado, Focus e metas.
+- Dashboard individual com resumo de watchlist, favoritos, oportunidades salvas, historico de analises e progresso para meta Premium.
+- Watchlist propria por utilizador, protegida por autenticacao.
+- Itens favoritos, oportunidades salvas e historico manual de analises.
 - Historico de precos capturado durante as consultas.
 - Cache em memoria para reduzir chamadas repetidas ao servico comunitario.
 - Catalogo inicial com pocoes, comidas, recursos T4-T8 e equipamentos PvP comuns.
@@ -27,6 +32,7 @@ backend/src/
   controllers/  adaptacao entre HTTP e casos de uso
   data/         catalogo e receitas iniciais
   database/     conexao, migration e seed
+  middleware/   autenticacao HTTP
   models/       persistencia MySQL/MariaDB
   routes/       contratos Express
   services/     mercado, arbitragem, crafting e cache
@@ -38,7 +44,7 @@ frontend/src/
   composables/  configuracoes e controle de requests
   router/       navegacao Vue Router
   services/     cliente HTTP
-  views/        telas da fase 1 e telas reservadas para fases futuras
+  views/        mercado, rankings, autenticacao, dashboard pessoal e perfil
 ```
 
 O backend e a fonte de verdade para regras financeiras. O frontend somente coleta premissas e apresenta os resultados, evitando divergencia entre telas.
@@ -47,9 +53,9 @@ O backend e a fonte de verdade para regras financeiras. O frontend somente colet
 
 - Node.js 20 ou superior
 - npm 10 ou superior
-- MySQL 8+ ou MariaDB 10.6+ para historico
+- MySQL 8+ ou MariaDB 10.6+ para historico, usuarios, watchlist e preferencias
 
-As consultas, arbitragem e crafting funcionam sem banco. Para concluir a Fase 1, o historico precisa estar ativo e gravando no MySQL/MariaDB.
+As consultas, arbitragem, crafting e rankings ainda conseguem ler dados publicos sem banco em algumas telas. Para usar historico, contas, dashboard pessoal, watchlist e preferencias, o MySQL/MariaDB precisa estar ativo.
 
 ## Instalacao
 
@@ -70,6 +76,8 @@ As consultas, arbitragem e crafting funcionam sem banco. Para concluir a Fase 1,
 3. Crie um banco vazio chamado `albion_market_analyzer` e ajuste as credenciais em `.env`.
 
    As chaves aceitas sao `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` ou os aliases `DB_HOST_MYSQL`, `DB_PORT_MYSQL`, `DB_USER_MYSQL`, `DB_PASSWORD_MYSQL`, `DB_NAME_MYSQL`.
+
+   Para autenticacao, defina `JWT_SECRET` com um valor proprio antes de publicar a aplicacao. Tambem podem ser ajustados `AUTH_TOKEN_TTL_SECONDS` e `PASSWORD_RESET_TTL_MINUTES`.
 
 4. Aplique o esquema e os dados iniciais:
 
@@ -98,7 +106,18 @@ Abra `http://localhost:5173`. A API fica em `http://localhost:3000`.
 | GET | `/api/market/refining-profit` | Ranking ou simulacao inicial de refino |
 | GET | `/api/market/rankings` | Rankings consolidados da Fase 2 |
 | GET | `/api/market/history` | Historico persistido |
-| GET/POST/DELETE | `/api/watchlist` | Reservado para fases futuras |
+| POST | `/api/auth/register` | Cadastro de utilizador |
+| POST | `/api/auth/login` | Login e emissao de token |
+| GET | `/api/auth/me` | Sessao autenticada atual |
+| POST | `/api/auth/password-reset/request` | Geracao de token de recuperacao |
+| POST | `/api/auth/password-reset/confirm` | Redefinicao de senha com token |
+| GET | `/api/user/dashboard` | Dashboard individual |
+| PATCH | `/api/user/profile` | Atualizacao de nome e email |
+| GET/PATCH | `/api/user/settings` | Preferencias, taxas e metas pessoais |
+| GET/POST/DELETE | `/api/user/favorites` | Favoritos pessoais |
+| GET/POST/DELETE | `/api/user/opportunities` | Oportunidades salvas |
+| GET/POST | `/api/user/history` | Historico pessoal de analises |
+| GET/POST/DELETE | `/api/watchlist` | Watchlist pessoal autenticada |
 
 Exemplo de arbitragem:
 
@@ -116,6 +135,18 @@ Exemplo de rankings da Fase 2:
 
 ```text
 GET /api/market/rankings?server=europe&limit=10
+```
+
+Exemplo de login da Fase 3:
+
+```text
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "email": "jogador@example.com",
+  "password": "senha-segura"
+}
 ```
 
 Listas podem ser separadas por virgula nos parametros `items`, `cities` e `qualities`. Servidores aceitos: `europe`, `americas` e `asia`.
@@ -158,8 +189,12 @@ npm run build
 
 Para validar com dados reais, suba a API e consulte `/api/health`, `/api/market/prices`, `/api/market/history`, `/api/market/arbitrage`, `/api/market/crafting-profit`, `/api/market/refining-profit` e `/api/market/rankings`.
 
+Para validar a Fase 3, crie uma conta em `/login`, acesse `/my`, edite preferencias em `/profile`, adicione um item em `/watchlist` e confirme que os dados aparecem isolados para o utilizador autenticado.
+
 ## Limites dos dados
 
 O Albion Online Data Project e comunitario. Um preco recente nao garante que a ordem ainda exista ou tenha volume suficiente. O score usa liquidez aproximada porque a API publica preco e data, nao volume real de ordens. Custos de transporte, risco de emboscada, journals, bonus locais e nutricionamento da estacao ainda nao entram no calculo.
+
+A recuperacao de senha da Fase 3 gera e valida tokens no banco. Enquanto nao existir provedor de email configurado, o token e devolvido na resposta da API para facilitar desenvolvimento local; isso deve ser trocado por envio de email antes de qualquer ambiente publico.
 
 As receitas iniciais de crafting e refino sao deliberadamente pequenas e ficam em `backend/src/data/recipes.js` e `backend/src/data/refiningRecipes.js`. Essa fronteira permite substituir o seed por uma fonte completa de dados do jogo sem alterar controllers ou interface. O ranking de queda de preco depende de historico suficiente no banco; em bases novas ele pode aparecer vazio ate existirem variacoes reais.

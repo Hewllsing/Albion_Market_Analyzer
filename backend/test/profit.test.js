@@ -6,6 +6,7 @@ import {
   estimateOpportunityRisk,
   getOpportunityRecommendation,
 } from '../src/utils/opportunity.js';
+import { createToken, hashPassword, verifyPassword, verifyToken } from '../src/utils/auth.js';
 import { calculateArbitrage, calculateCraftingProfit, getRecommendation } from '../src/utils/profit.js';
 
 test('calcula lucro de arbitragem descontando taxa sobre a venda', () => {
@@ -81,4 +82,16 @@ test('calcula score e recomendacao de oportunidade', () => {
   assert.ok(score >= 65);
   assert.equal(getOpportunityRecommendation(82), 'Forte oportunidade');
   assert.equal(getOpportunityRecommendation(score), score >= 80 ? 'Forte oportunidade' : 'Boa oportunidade');
+});
+
+test('gera hash de senha e valida token de sessao', async () => {
+  const password = 'senha-muito-segura';
+  const hashed = await hashPassword(password);
+  assert.equal(await verifyPassword({ password, salt: hashed.salt, hash: hashed.hash }), true);
+  assert.equal(await verifyPassword({ password: 'errada', salt: hashed.salt, hash: hashed.hash }), false);
+
+  const token = createToken({ id: 123, email: 'user@example.com', name: 'User' });
+  const payload = verifyToken(token);
+  assert.equal(payload.sub, '123');
+  assert.equal(payload.email, 'user@example.com');
 });
