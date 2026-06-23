@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { filterMarketPrices } from '../src/services/marketService.js';
 import { calculateArbitrage, calculateCraftingProfit, getRecommendation } from '../src/utils/profit.js';
 
 test('calcula lucro de arbitragem descontando taxa sobre a venda', () => {
@@ -31,4 +32,14 @@ test('gera recomendacao por margem', () => {
   assert.equal(getRecommendation(20, 100), 'Craftar');
   assert.equal(getRecommendation(8, 100), 'Aguardar');
   assert.equal(getRecommendation(-2, -10), 'Nao vale a pena');
+});
+
+test('filtra cotacoes por preco minimo e margem minima', () => {
+  const prices = [
+    { itemId: 'A', sellPriceMin: 100, buyPriceMax: 130 },
+    { itemId: 'B', sellPriceMin: 80, buyPriceMax: 150 },
+    { itemId: 'C', sellPriceMin: 200, buyPriceMax: 210 },
+  ];
+  const result = filterMarketPrices(prices, { minimumPrice: 100, minimumMargin: 20 });
+  assert.deepEqual(result.map((price) => price.itemId), ['A']);
 });

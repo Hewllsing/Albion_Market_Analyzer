@@ -83,12 +83,24 @@ const fetchChunk = async (options) => {
   }
 };
 
+export const filterMarketPrices = (prices, { minimumPrice = 0, minimumMargin = null } = {}) => prices.filter((price) => {
+  if (minimumPrice > 0 && price.sellPriceMin < minimumPrice) return false;
+  if (minimumMargin !== null && minimumMargin !== undefined) {
+    if (price.sellPriceMin <= 0 || price.buyPriceMax <= 0) return false;
+    const margin = ((price.buyPriceMax - price.sellPriceMin) / price.sellPriceMin) * 100;
+    if (margin < minimumMargin) return false;
+  }
+  return true;
+});
+
 export const fetchMarketPrices = async ({
   itemIds,
   cities = DEFAULT_CITIES,
   qualities = DEFAULT_QUALITIES,
   server = 'europe',
   persist = true,
+  minimumPrice = 0,
+  minimumMargin = null,
 }) => {
   if (!itemIds?.length) throw new AppError('Informe ao menos um item.', 400);
   if (!cities?.length) throw new AppError('Informe ao menos uma cidade.', 400);
@@ -111,13 +123,15 @@ export const fetchMarketPrices = async ({
       persistence.error = error.message;
     }
   }
+  const filteredData = filterMarketPrices(data, { minimumPrice, minimumMargin });
 
   return {
-    data,
+    data: filteredData,
     meta: {
       server: normalizedServer,
-      itemCount: new Set(data.map((price) => price.itemId)).size,
-      priceCount: data.length,
+      itemCount: new Set(filteredData.map((price) => price.itemId)).size,
+      priceCount: filteredData.length,
+      rawPriceCount: data.length,
       cacheHit: responses.every((response) => response.cacheHit),
       persistence,
       fetchedAt: new Date().toISOString(),

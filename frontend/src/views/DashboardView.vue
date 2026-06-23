@@ -9,29 +9,68 @@ import PageHeader from '../components/PageHeader.vue';
 import { useMarketSettings } from '../composables/useMarketSettings.js';
 import { useRequest } from '../composables/useRequest.js';
 import { api } from '../services/api.js';
-import { formatPercent, formatSilver } from '../utils/format.js';
+import { formatDate, formatPercent, formatSilver } from '../utils/format.js';
 
-const { settings } = useMarketSettings();
+const { settings, cities } = useMarketSettings();
 const { loading, error, execute } = useRequest();
 const arbitrage = ref([]);
 const crafts = ref([]);
+const priceQuotes = ref([]);
 const meta = ref({});
+const priceMeta = ref({});
 
 const loadDashboard = async () => {
   const result = await execute(() => Promise.all([
     api.getArbitrage({ server: settings.server, qualities: 1, minimumProfit: 1, limit: 10 }),
     api.getCraftingProfit({ server: settings.server, materialCity: 'Caerleon', saleCity: 'Caerleon', limit: 10 }),
+    api.getPrices({ server: settings.server, category: 'Recursos refinados', tier: 4, cities: cities.join(','), qualities: 1 }),
   ]));
   if (!result) return;
   arbitrage.value = result[0].data;
   crafts.value = result[1].data;
+  priceQuotes.value = result[2].data;
   meta.value = result[0].meta;
+  priceMeta.value = result[2].meta;
 };
 
 const bestOpportunity = computed(() => arbitrage.value[0]);
 const totalProfit = computed(() => arbitrage.value.reduce((sum, item) => sum + item.netProfit, 0));
 const lowRiskCount = computed(() => arbitrage.value.filter((item) => item.risk.level === 'Baixo').length);
 const bestCraft = computed(() => crafts.value[0]);
+const highMarginItems = computed(() => priceQuotes.value
+  .filter((price) => price.sellPriceMin > 0 && price.buyPriceMax > price.sellPriceMin)
+  .map((price) => ({
+    ...price,
+    marginPercent: ((price.buyPriceMax - price.sellPriceMin) / price.sellPriceMin) * 100,
+  }))
+  .sort((first, second) => second.marginPercent - first.marginPercent)
+  .slice(0, 6));
+const belowAverageItems = computed(() => {
+  const groups = new Map();
+  priceQuotes.value
+    .filter((price) => price.sellPriceMin > 0)
+    .forEach((price) => {
+      const key = `${price.itemId}:${price.quality}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(price);
+    });
+
+  return [...groups.values()].flatMap((group) => {
+    const average = group.reduce((sum, price) => sum + price.sellPriceMin, 0) / group.length;
+    return group
+      .filter((price) => price.sellPriceMin < average)
+      .map((price) => ({
+        ...price,
+        averagePrice: average,
+        discountPercent: ((average - price.sellPriceMin) / average) * 100,
+      }));
+  }).sort((first, second) => second.discountPercent - first.discountPercent).slice(0, 6);
+});
+const latestUpdates = computed(() => priceQuotes.value
+  .map((price) => ({ ...price, updatedAt: price.sellPriceMinDate || price.buyPriceMaxDate }))
+  .filter((price) => price.updatedAt)
+  .sort((first, second) => new Date(second.updatedAt) - new Date(first.updatedAt))
+  .slice(0, 5));
 
 onMounted(loadDashboard);
 </script>
@@ -87,7 +126,7 @@ onMounted(loadDashboard);
               <tbody>
                 <tr v-for="item in arbitrage" :key="`${item.itemId}-${item.purchaseCity}-${item.saleCity}`">
                   <td><ItemBadge :name="item.itemName" :tier="item.tier" /></td>
-                  <td><span class="route"><span>{{ item.purchaseCity }}</span><b>→</b><span>{{ item.saleCity }}</span></span></td>
+                  <td><span class="route"><span>{{ item.purchaseCity }}</span><b>-&gt;</b><span>{{ item.saleCity }}</span></span></td>
                   <td>{{ formatSilver(item.purchasePrice) }}</td>
                   <td>{{ formatSilver(item.salePrice) }}</td>
                   <td class="positive-value">+{{ formatSilver(item.netProfit) }}</td>
@@ -112,12 +151,42 @@ onMounted(loadDashboard);
           <EmptyState v-else title="Sem crafts calculaveis" message="Algum material ou produto esta sem preco em Caerleon." />
         </article>
 
+        <article class="panel">
+          <div class="panel-heading"><div><p class="eyebrow">Margem</p><h2>Itens com maior margem</h2></div></div>
+          <div v-if="highMarginItems.length" class="rank-list">
+            <div v-for="(item, index) in highMarginItems" :key="`${item.itemId}-${item.city}`" class="rank-row">
+              <span class="rank-number">{{ String(index + 1).padStart(2, '0') }}</span>
+              <div><strong>{{ item.itemName }}</strong><small>{{ item.city }} - T{{ item.tier }}</small></div>
+              <div class="rank-value"><strong>{{ formatPercent(item.marginPercent) }}</strong><small>{{ formatSilver(item.buyPriceMax - item.sellPriceMin) }}</small></div>
+            </div>
+          </div>
+          <EmptyState v-else title="Sem margem positiva" message="Nao encontramos buy order acima do sell min nos recursos monitorados." />
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading"><div><p class="eyebrow">Abaixo da media</p><h2>Possiveis compras baratas</h2></div></div>
+          <div v-if="belowAverageItems.length" class="rank-list">
+            <div v-for="(item, index) in belowAverageItems" :key="`${item.itemId}-${item.city}-discount`" class="rank-row">
+              <span class="rank-number">{{ String(index + 1).padStart(2, '0') }}</span>
+              <div><strong>{{ item.itemName }}</strong><small>{{ item.city }} abaixo da media entre cidades</small></div>
+              <div class="rank-value"><strong>{{ formatPercent(item.discountPercent) }}</strong><small>{{ formatSilver(item.sellPriceMin) }}</small></div>
+            </div>
+          </div>
+          <EmptyState v-else title="Sem descontos relativos" message="Os precos atuais estao muito proximos da media entre cidades." />
+        </article>
+
         <article class="panel insight-panel">
-          <p class="eyebrow">Leitura rapida</p>
-          <h2>Qualidade do sinal</h2>
+          <p class="eyebrow">API</p>
+          <h2>Ultimas atualizacoes</h2>
           <div class="signal-score"><strong>{{ lowRiskCount }}/{{ arbitrage.length || 0 }}</strong><span>rotas com precos recentes</span></div>
-          <p>Confirme volume no jogo antes de transportar. A API publica informa preco e data, mas nao garante liquidez disponivel.</p>
-          <small v-if="meta.fetchedAt">Consulta concluida agora no servidor {{ settings.server }}.</small>
+          <div v-if="latestUpdates.length" class="api-update-list">
+            <div v-for="item in latestUpdates" :key="`${item.itemId}-${item.city}-update`">
+              <strong>{{ item.itemName }}</strong>
+              <span>{{ item.city }} - {{ formatDate(item.updatedAt) }}</span>
+            </div>
+          </div>
+          <p>Confirme volume no jogo antes de transportar. A API publica preco e data, mas nao garante liquidez disponivel.</p>
+          <small v-if="meta.fetchedAt || priceMeta.fetchedAt">Consulta concluida no servidor {{ settings.server }}.</small>
         </article>
       </section>
     </template>

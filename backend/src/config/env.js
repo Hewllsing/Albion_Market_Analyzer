@@ -1,11 +1,20 @@
 import dotenv from 'dotenv';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-dotenv.config({ quiet: true });
+const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
+const projectRoot = path.resolve(currentDirectory, '..', '..', '..');
+const backendRoot = path.resolve(currentDirectory, '..', '..');
+
+dotenv.config({ path: path.join(projectRoot, '.env'), quiet: true });
+dotenv.config({ path: path.join(backendRoot, '.env'), quiet: true, override: true });
 
 const toNumber = (value, fallback) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
 };
+
+const readEnv = (...names) => names.map((name) => process.env[name]).find((value) => value !== undefined && value !== '');
 
 export const env = {
   nodeEnv: process.env.NODE_ENV || 'development',
@@ -15,11 +24,11 @@ export const env = {
   marketRequestTimeoutMs: toNumber(process.env.MARKET_REQUEST_TIMEOUT_MS, 15000),
   defaultMarketTax: toNumber(process.env.DEFAULT_MARKET_TAX, 0.065),
   database: {
-    host: process.env.DB_HOST,
-    port: toNumber(process.env.DB_PORT, 3306),
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD || '',
-    name: process.env.DB_NAME,
-    connectionLimit: toNumber(process.env.DB_CONNECTION_LIMIT, 10),
+    host: readEnv('DB_HOST', 'DB_HOST_MYSQL'),
+    port: toNumber(readEnv('DB_PORT', 'DB_PORT_MYSQL'), 3306),
+    user: readEnv('DB_USER', 'DB_USER_MYSQL'),
+    password: readEnv('DB_PASSWORD', 'DB_PASSWORD_MYSQL') || '',
+    name: readEnv('DB_NAME', 'DB_NAME_MYSQL'),
+    connectionLimit: toNumber(readEnv('DB_CONNECTION_LIMIT', 'DB_CONNECTION_LIMIT_MYSQL'), 10),
   },
 };

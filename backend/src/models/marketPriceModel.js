@@ -26,34 +26,45 @@ export const saveMarketPrices = async (prices) => {
   return values.length;
 };
 
-export const findMarketHistory = async ({ itemId, city, server, limit = 250 }) => {
+export const findMarketHistory = async ({ itemId, city, server, category, tier, limit = 250 }) => {
   const database = getPool();
   if (!database) return [];
 
   const filters = [];
   const values = [];
   if (itemId) {
-    filters.push('item_id = ?');
+    filters.push('mp.item_id = ?');
     values.push(itemId);
   }
   if (city) {
-    filters.push('city = ?');
+    filters.push('mp.city = ?');
     values.push(city);
   }
   if (server) {
-    filters.push('server = ?');
+    filters.push('mp.server = ?');
     values.push(server);
+  }
+  if (category) {
+    filters.push('i.category = ?');
+    values.push(category);
+  }
+  if (tier) {
+    filters.push('i.tier = ?');
+    values.push(Number(tier));
   }
   values.push(limit);
 
   const where = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
   const [rows] = await database.query(
-    `SELECT id, item_id AS itemId, city, quality,
-            sell_price_min AS sellPriceMin, sell_price_min_date AS sellPriceMinDate,
-            sell_price_max AS sellPriceMax, buy_price_max AS buyPriceMax,
-            buy_price_max_date AS buyPriceMaxDate, server, created_at AS createdAt
-     FROM market_prices ${where}
-     ORDER BY created_at DESC LIMIT ?`,
+    `SELECT mp.id, mp.item_id AS itemId, i.name AS itemName, i.category, i.tier,
+            mp.city, mp.quality,
+            mp.sell_price_min AS sellPriceMin, mp.sell_price_min_date AS sellPriceMinDate,
+            mp.sell_price_max AS sellPriceMax, mp.buy_price_max AS buyPriceMax,
+            mp.buy_price_max_date AS buyPriceMaxDate, mp.server, mp.created_at AS createdAt
+     FROM market_prices mp
+     INNER JOIN items i ON i.item_id = mp.item_id
+     ${where}
+     ORDER BY mp.created_at DESC LIMIT ?`,
     values,
   );
   return rows;

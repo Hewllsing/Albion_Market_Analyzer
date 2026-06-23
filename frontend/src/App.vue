@@ -11,7 +11,6 @@ const navigation = [
   { to: '/prices', code: 'MP', label: 'Precos' },
   { to: '/arbitrage', code: 'AR', label: 'Arbitragem' },
   { to: '/crafting', code: 'CR', label: 'Crafting' },
-  { to: '/watchlist', code: 'WL', label: 'Watchlist' },
 ];
 </script>
 

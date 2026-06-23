@@ -2,6 +2,7 @@ import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
 import { env } from './config/env.js';
+import { checkDatabaseConnection } from './database/connection.js';
 import itemRoutes from './routes/itemRoutes.js';
 import marketRoutes from './routes/marketRoutes.js';
 import watchlistRoutes from './routes/watchlistRoutes.js';
@@ -13,8 +14,16 @@ export const createApp = () => {
   app.use(cors({ origin: env.frontendUrl }));
   app.use(express.json({ limit: '100kb' }));
 
-  app.get('/api/health', (_request, response) => {
-    response.json({ status: 'ok', timestamp: new Date().toISOString() });
+  app.get('/api/health', async (_request, response) => {
+    const database = await checkDatabaseConnection();
+    response.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      database: {
+        configured: database.configured,
+        connected: database.connected,
+      },
+    });
   });
   app.use('/api/market', marketRoutes);
   app.use('/api/items', itemRoutes);

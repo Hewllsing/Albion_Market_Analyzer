@@ -2,14 +2,17 @@
 
 Aplicacao web para transformar precos publicos do Albion Online em decisoes de arbitragem e crafting. O projeto consulta o [Albion Online Data Project](https://www.albion-online-data.com/), cruza cidades, desconta taxas, classifica o risco por atualizacao do preco e mantem historico em MySQL/MariaDB.
 
+## Status do desenvolvimento
+
+Estamos trabalhando por fases. A fase ativa e a **Fase 1 - MVP pessoal**, com foco em uma ferramenta funcional para uso individual antes de evoluir para ranking avancado, multiusuario, alertas ou monetizacao.
+
 ## Recursos
 
-- Dashboard com melhor sinal, top 10 rotas e crafts em destaque.
-- Consulta de precos por servidor, cidade, categoria, tier e qualidade.
+- Dashboard com melhores arbitragens, melhores crafts, itens com maior margem, precos abaixo da media e ultimas atualizacoes da API.
+- Consulta de precos por item, servidor, cidade, categoria, tier, qualidade, preco minimo e margem minima.
 - Arbitragem entre cidades com lucro bruto, taxa, lucro liquido, margem e risco.
 - Simulador de crafting com taxa da estacao, retorno de recursos, Focus e quantidade.
 - Historico de precos capturado durante as consultas.
-- Watchlist persistente com margem e lucro alvo.
 - Cache em memoria para reduzir chamadas repetidas ao servico comunitario.
 - Catalogo inicial com pocoes, comidas, recursos T4-T8 e equipamentos PvP comuns.
 
@@ -32,7 +35,7 @@ frontend/src/
   composables/  configuracoes e controle de requests
   router/       navegacao Vue Router
   services/     cliente HTTP
-  views/        cinco telas da aplicacao
+  views/        telas da fase 1 e telas reservadas para fases futuras
 ```
 
 O backend e a fonte de verdade para regras financeiras. O frontend somente coleta premissas e apresenta os resultados, evitando divergencia entre telas.
@@ -41,9 +44,9 @@ O backend e a fonte de verdade para regras financeiras. O frontend somente colet
 
 - Node.js 20 ou superior
 - npm 10 ou superior
-- MySQL 8+ ou MariaDB 10.6+ para historico e watchlist
+- MySQL 8+ ou MariaDB 10.6+ para historico
 
-As consultas, arbitragem e crafting funcionam sem banco. Historico e watchlist retornam uma mensagem de configuracao enquanto o banco estiver desativado.
+As consultas, arbitragem e crafting funcionam sem banco. Para concluir a Fase 1, o historico precisa estar ativo e gravando no MySQL/MariaDB.
 
 ## Instalacao
 
@@ -53,13 +56,17 @@ As consultas, arbitragem e crafting funcionam sem banco. Historico e watchlist r
    npm install
    ```
 
-2. Crie o arquivo de configuracao:
+2. Crie o arquivo de configuracao na raiz:
 
    ```powershell
-   Copy-Item .env.example backend/.env
+   Copy-Item .env.example .env
    ```
 
-3. Crie um banco vazio chamado `albion_market_analyzer` e ajuste as credenciais em `backend/.env`.
+   O backend tambem aceita `backend/.env`, mas a raiz e o local recomendado para este repositorio.
+
+3. Crie um banco vazio chamado `albion_market_analyzer` e ajuste as credenciais em `.env`.
+
+   As chaves aceitas sao `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` ou os aliases `DB_HOST_MYSQL`, `DB_PORT_MYSQL`, `DB_USER_MYSQL`, `DB_PASSWORD_MYSQL`, `DB_NAME_MYSQL`.
 
 4. Aplique o esquema e os dados iniciais:
 
@@ -82,11 +89,11 @@ Abra `http://localhost:5173`. A API fica em `http://localhost:3000`.
 | --- | --- | --- |
 | GET | `/api/health` | Estado da API |
 | GET | `/api/items` | Catalogo monitorado |
-| GET | `/api/market/prices` | Precos por itens/cidades/qualidades/servidor |
+| GET | `/api/market/prices` | Precos por item/cidade/qualidade/servidor com filtros de preco e margem |
 | GET | `/api/market/arbitrage` | Comparacao de compra e venda entre cidades |
 | GET | `/api/market/crafting-profit` | Ranking ou simulacao de um item |
 | GET | `/api/market/history` | Historico persistido |
-| GET/POST/DELETE | `/api/watchlist` | Monitores do usuario |
+| GET/POST/DELETE | `/api/watchlist` | Reservado para fases futuras |
 
 Exemplo de arbitragem:
 
@@ -101,6 +108,12 @@ GET /api/market/crafting-profit?itemId=T6_MAIN_SWORD&materialCity=Thetford&saleC
 ```
 
 Listas podem ser separadas por virgula nos parametros `items`, `cities` e `qualities`. Servidores aceitos: `europe`, `americas` e `asia`.
+
+Exemplo de consulta de mercado com filtros da Fase 1:
+
+```text
+GET /api/market/prices?items=T4_METALBAR&cities=Caerleon&qualities=1&server=europe&minimumPrice=1&minimumMargin=5
+```
 
 ## Formulas
 
@@ -118,9 +131,13 @@ Crafting considera consumo efetivo aproximado de `quantidadeMaterial * (1 - reto
 ## Verificacao
 
 ```bash
+npm run db:migrate -w backend
+npm run db:seed -w backend
 npm test
 npm run build
 ```
+
+Para validar com dados reais, suba a API e consulte `/api/health`, `/api/market/prices`, `/api/market/history`, `/api/market/arbitrage` e `/api/market/crafting-profit`.
 
 ## Limites dos dados
 

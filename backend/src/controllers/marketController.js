@@ -1,5 +1,6 @@
 import { env } from '../config/env.js';
 import { DEFAULT_CITIES, DEFAULT_QUALITIES } from '../config/market.js';
+import { isDatabaseConfigured } from '../database/connection.js';
 import { findMarketHistory } from '../models/marketPriceModel.js';
 import { findArbitrageOpportunities } from '../services/arbitrageService.js';
 import { calculateItemCraftingProfit, rankCraftingOpportunities } from '../services/craftingService.js';
@@ -21,6 +22,8 @@ export const getPrices = async (request, response) => {
     cities: parseCsv(request.query.cities, DEFAULT_CITIES),
     qualities: parseCsv(request.query.qualities, DEFAULT_QUALITIES).map(Number),
     server: request.query.server || 'europe',
+    minimumPrice: parseNumber(request.query.minimumPrice, 0, { min: 0 }),
+    minimumMargin: parseNumber(request.query.minimumMargin, null),
   });
   response.json(result);
 };
@@ -73,13 +76,15 @@ export const getHistory = async (request, response) => {
     itemId: request.query.itemId,
     city: request.query.city,
     server: request.query.server,
+    category: request.query.category,
+    tier: request.query.tier,
     limit: parseNumber(request.query.limit, 250, { min: 1, max: 1000 }),
   });
   response.json({
     data,
     meta: {
       count: data.length,
-      persistenceConfigured: Boolean(process.env.DB_HOST && process.env.DB_NAME),
+      persistenceConfigured: isDatabaseConfigured(),
     },
   });
 };

@@ -75,7 +75,7 @@ onMounted(async () => {
           <article class="recommendation-card" :class="`recommendation-${recommendationTone}`">
             <p class="eyebrow">Recomendacao</p>
             <h2>{{ result.recommendation }}</h2>
-            <p>{{ result.itemName }} · {{ result.quantity }} unidade(s)</p>
+            <p>{{ result.itemName }} - {{ result.quantity }} unidade(s)</p>
             <div><strong>{{ formatSilver(result.netProfit) }}</strong><span>lucro liquido total</span></div>
           </article>
           <article class="panel breakdown-panel">
@@ -93,7 +93,7 @@ onMounted(async () => {
           <article class="panel materials-panel">
             <div class="panel-heading"><div><p class="eyebrow">Entrada</p><h2>Materiais</h2></div></div>
             <div v-for="material in result.materials" :key="material.itemId" class="material-row">
-              <span>{{ material.itemName }}</span><span>{{ material.quantity }} × {{ formatSilver(material.unitPrice) }}</span>
+              <span>{{ material.itemName }}</span><span>{{ material.quantity }} x {{ formatSilver(material.unitPrice) }}</span>
             </div>
           </article>
         </template>
